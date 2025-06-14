@@ -1,0 +1,594 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>감염병 퀴즈</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f4f4f4;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            color: #333;
+        }
+        .quiz-container {
+            background-color: #fff;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+            width: 90%;
+            max-width: 600px;
+            text-align: center;
+            box-sizing: border-box;
+            position: relative;
+        }
+        h1 {
+            color: #2c3e50;
+            margin-bottom: 20px;
+            font-size: 1.8em;
+        }
+        .question-area {
+            margin-bottom: 25px;
+            font-size: 1.2em;
+            line-height: 1.5;
+            min-height: 80px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+        }
+        .scrambled-letters {
+            display: flex;
+            justify-content: center;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-top: 20px;
+            min-height: 60px;
+        }
+        .scrambled-letters .letter-box {
+            background-color: #e0e0e0;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            padding: 10px 15px;
+            cursor: pointer;
+            font-size: 1.1em;
+            transition: background-color 0.2s, transform 0.2s;
+            user-select: none;
+            width: 45px;
+            height: 45px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        .scrambled-letters .letter-box:hover {
+            background-color: #d0d0d0;
+            transform: translateY(-2px);
+        }
+        .scrambled-letters .letter-box.selected {
+            background-color: #a0d468;
+            border-color: #7ab83c;
+            color: #fff;
+        }
+        .answer-input {
+            margin-top: 25px;
+            display: flex;
+            justify-content: center;
+            flex-wrap: wrap;
+            gap: 10px;
+            min-height: 60px;
+        }
+        .answer-input .answer-box {
+            background-color: #f0f0f0;
+            border: 1px dashed #bbb;
+            border-radius: 5px;
+            padding: 10px 15px;
+            font-size: 1.1em;
+            min-width: 45px;
+            height: 45px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            color: #555;
+            cursor: pointer;
+        }
+        .answer-input .answer-box.filled {
+            background-color: #dbeaff; /* 채워진 네모칸의 배경색 */
+            border-color: #92bdfa; /* 채워진 네모칸의 테두리 색 */
+            color: #333;
+        }
+        /* 새 CSS: 비활성화된 네모 칸 스타일 */
+        .answer-input .answer-box.disabled {
+            background-color: #dddddd;
+            border-color: #aaaaaa;
+            cursor: not-allowed;
+            color: #888;
+            font-weight: bold;
+            text-align: center;
+        }
+        .buttons {
+            margin-top: 30px;
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+        }
+        button {
+            padding: 12px 25px;
+            font-size: 1em;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.2s, transform 0.2s;
+            outline: none;
+        }
+        button.submit {
+            background-color: #5cb85c;
+            color: white;
+        }
+        button.submit:hover {
+            background-color: #4cae4c;
+            transform: translateY(-1px);
+        }
+        button.next {
+            background-color: #0275d8;
+            color: white;
+        }
+        button.next:hover {
+            background-color: #025aa5;
+            transform: translateY(-1px);
+        }
+        /* 새로 추가된 초기화 버튼 스타일 */
+        button.clear-input {
+            background-color: #ffc107; /* 주황색 계열 */
+            color: white;
+        }
+        button.clear-input:hover {
+            background-color: #e0a800;
+            transform: translateY(-1px);
+        }
+
+        /* 추가된 다시 시작 버튼 스타일 */
+        button.restart-quiz {
+            background-color: #6c757d; /* 회색 계열로 변경 */
+            color: white;
+            margin-top: 20px; /* 위쪽 여백 추가 */
+            display: block; /* 블록 요소로 만들어 중앙 정렬 용이하게 함 */
+            margin-left: auto; /* 자동 여백으로 중앙 정렬 */
+            margin-right: auto; /* 자동 여백으로 중앙 정렬 */
+            padding: 15px 30px; /* 버튼 크기 키움 */
+            font-size: 1.2em; /* 폰트 크기 키움 */
+        }
+        button.restart-quiz:hover {
+            background-color: #5a6268;
+            transform: translateY(-1px);
+        }
+        .result {
+            margin-top: 20px;
+            font-size: 1.3em;
+            font-weight: bold;
+            min-height: 30px;
+        }
+        .result.correct {
+            color: #28a745;
+        }
+        .result.wrong {
+            color: #dc3545;
+        }
+        .start-screen {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.9);
+            color: white;
+            font-size: 2em;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+            border-radius: 10px;
+            z-index: 20;
+        }
+        .start-screen button {
+            margin-top: 20px;
+            padding: 15px 30px;
+            font-size: 1.5em;
+            background-color: #28a745;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+        }
+        .start-screen button:hover {
+            background-color: #218838;
+        }
+        .feedback-message {
+            margin-top: 15px;
+            font-size: 1.1em;
+            color: #666;
+            min-height: 25px;
+        }
+        .guidance-message {
+            font-size: 0.9em; /* 작게 설정 */
+            color: #777;
+            margin-top: 10px;
+            min-height: 1.2em; /* 문구가 없을 때도 공간 유지 */
+        }
+        .final-results {
+            margin-top: 30px;
+            font-size: 1.2em;
+            font-weight: bold;
+            color: #2c3e50;
+        }
+        .final-results ul {
+            list-style: none;
+            padding: 0;
+            margin-top: 15px;
+            text-align: left;
+            max-height: 200px;
+            overflow-y: auto;
+            border: 1px solid #eee;
+            padding: 10px;
+            border-radius: 5px;
+            background-color: #f9f9f9;
+        }
+        .final-results li {
+            margin-bottom: 5px;
+            padding-bottom: 5px;
+            border-bottom: 1px dashed #eee;
+        }
+        .final-results li:last-child {
+            border-bottom: none;
+        }
+        .final-results .correct-answer {
+            color: #28a745;
+        }
+        .final-results .wrong-answer {
+            color: #dc3545;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="quiz-container">
+        <div class="start-screen" id="startScreen">
+            <h1>감염병 퀴즈</h1>
+            <p>정답을 맞춰보세요!</p>
+            <button id="startButton">퀴즈 시작</button>
+        </div>
+
+        <h1>감염병 퀴즈</h1>
+        <div class="question-area" id="questionArea">
+            <p id="questionText"></p>
+        </div>
+
+        <div class="scrambled-letters" id="scrambledLetters">
+        </div>
+
+        <div class="answer-input" id="answerInput">
+        </div>
+
+        <div class="feedback-message" id="feedbackMessage"></div>
+
+        <div class="buttons">
+            <button class="submit" id="submitBtn" disabled>정답 확인</button>
+            <button class="next" id="nextBtn" disabled>다음 문제</button>
+            <button class="clear-input" id="clearInputBtn">초기화</button>
+        </div>
+        <p class="guidance-message" id="guidanceMessage"></p>
+
+        <div class="result" id="result"></div>
+
+        <div class="final-results" id="finalResults" style="display: none;">
+            <h2>퀴즈 결과</h2>
+            <p>총 문제: <span id="totalQuestionsCount"></span></p>
+            <p>맞춘 개수: <span id="correctAnswersCount"></span></p>
+            <p>틀린 개수: <span id="wrongAnswersCount"></span></p>
+            <h3>전체 문제</h3> 
+            <ul id="allQuestionsList"></ul>
+            <button class="restart-quiz" id="restartQuizBtn">다시 시작</button>
+        </div>
+    </div>
+
+    <audio id="correctSound" src="https://www.soundjay.com/button/sounds/button-3.mp3" preload="auto"></audio>
+    <audio id="wrongSound" src="https://www.soundjay.com/button/sounds/button-10.mp3" preload="auto"></audio>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const quizData = [
+                // Moved questions from original indices 10, 11, 12 to the beginning (0, 1, 2)
+                {"question": "사람에게 전염되어 병을 옮기는 질병은 ?", "answer": "감염병", "scrambled": ["감", "염", "병", "구", "기"]}, // Originally 11th (index 10)
+                {"question": "열, 기침, 몸살이 생기고 겨울에 많이 유행하는 감염병은?", "answer": "독감", "scrambled": ["독", "감", "열", "침"]}, // Originally 12th (index 11)
+                {"question": "외출 후 병에 걸리지 않기 위해 꼭 해야 하는 위생 습관은?", "answer": "손씻기", "scrambled": ["손", "씻", "기", "생"]}, // Originally 13th (index 12)
+                
+                // Remaining questions in their original relative order
+                {"question": "피부에 물집이 생기고 가려운 증상이 나타나는 전염성이 높은 감염병은?", "answer": "수두", "scrambled": ["수", "두", "부", "병"]},
+                {"question": "주로 폐에 감염이 생기고 미열, 오한, 기침이 오래 계속되는 병은?", "answer": "결핵", "scrambled": ["결", "핵", "병", "감"]},
+                {"question": "감염병을 일으키는 세균이나 바이러스 등을 무엇이라고 합니까?", "answer": "병원체", "scrambled": ["병", "원", "체", "독"]},
+                {"question": "병에 걸렸지만 아직 증상이 나타나지 않은 기간을 무엇이라고 합니까?", "answer": "잠복기", "scrambled": ["잠", "복", "기", "간"]},
+                {"question": "감염병에 걸리지 않도록 미리 면역이 생기게 하는 방법은 ?", "answer": "예방접종", "scrambled": ["예", "방", "접", "종"]},
+                {"question": "1일 8번 30초씩 손을 씻자라는 건강 실천 운동 이름은?", "answer": "1830운동", "scrambled": ["운", "1", "0", "동", "8", "3", "손"]}, 
+                {"question": "기침이나 재채기를 할 때 입과 코를 팔 안쪽으로 가리는 것을 무엇이라고 합니까?", "answer": "기침예절", "scrambled": ["기", "침", "예", "절"]},
+                {"question": "감염병이 유행할 때 입과 코를 가리는 데 사용하는 물건은?", "answer": "마스크", "scrambled": ["마", "스", "크", "입", "코"]},
+                {"question": "우리 몸이 병원체를 이겨내는 힘을 무엇이라고 합니까?", "answer": "면역", "scrambled": ["면", "역", "힘", "몸"]},
+                {"question": "독감이나 코로나 19는 신체의 어느 기관에 발생하는 감염병인가요?", "answer": "호흡기감염병", "scrambled": ["호", "흡", "기", "감", "염", "병", "기", "체"]}, 
+                {"question": "감염병에 걸렸을 때 학교에 등교를 중지하는 것을 무엇이라고 하나요?", "answer": "등교중지", "scrambled": ["등", "교", "중", "지"]},
+                {"question": "사람들 사이의 거리를 넉넉히 두고, 모임이나 외출을 줄이는 것을 무엇이라고 하나요?", "answer": "사회적 거리두기", "scrambled": ["사", "회", "적", "거", "리", "두", "기", "간"]}
+            ];
+
+            let currentQuestionIndex = 0;
+            let selectedLetters = [];
+            let scrambledLetterElements = [];
+            let answerBoxElements = [];
+            let correctCount = 0;
+            let wrongCount = 0;
+            let quizActive = false;
+
+            const questionText = document.getElementById('questionText');
+            const scrambledLettersContainer = document.getElementById('scrambledLetters');
+            const answerInputContainer = document.getElementById('answerInput');
+            const submitBtn = document.getElementById('submitBtn');
+            const nextBtn = document.getElementById('nextBtn');
+            const resultDiv = document.getElementById('result');
+            const startScreen = document.getElementById('startScreen');
+            const startButton = document.getElementById('startButton');
+            const feedbackMessage = document.getElementById('feedbackMessage');
+            const guidanceMessage = document.getElementById('guidanceMessage');
+            const finalResultsDiv = document.getElementById('finalResults');
+            const totalQuestionsCountSpan = document.getElementById('totalQuestionsCount');
+            const correctAnswersCountSpan = document.getElementById('correctAnswersCount');
+            const wrongAnswersCountSpan = document.getElementById('wrongAnswersCount');
+            const allQuestionsList = document.getElementById('allQuestionsList');
+            const restartQuizBtn = document.getElementById('restartQuizBtn'); 
+            const clearInputBtn = document.getElementById('clearInputBtn');
+
+            startButton.addEventListener('click', startGame);
+            submitBtn.addEventListener('click', checkAnswer);
+            nextBtn.addEventListener('click', loadNextQuestion);
+            restartQuizBtn.addEventListener('click', restartGame); 
+            clearInputBtn.addEventListener('click', clearAnswer);
+
+            function startGame() {
+                startScreen.style.display = 'none';
+                finalResultsDiv.style.display = 'none'; 
+                quizActive = true;
+                correctCount = 0;
+                wrongCount = 0;
+                currentQuestionIndex = 0;
+                
+                submitBtn.style.display = 'inline-block'; 
+                nextBtn.style.display = 'inline-block'; 
+                clearInputBtn.style.display = 'inline-block';
+
+                loadQuestion();
+            }
+
+            function restartGame() {
+                startGame(); 
+            }
+
+            function loadQuestion() {
+                if (currentQuestionIndex >= quizData.length) {
+                    endQuiz();
+                    return;
+                }
+
+                const currentQuiz = quizData[currentQuestionIndex];
+                questionText.textContent = currentQuiz.question;
+                resultDiv.textContent = '';
+                resultDiv.className = 'result';
+                feedbackMessage.textContent = '';
+                guidanceMessage.textContent = '';
+                clearAnswer();
+
+                submitBtn.disabled = true;
+                nextBtn.disabled = true;
+
+                displayScrambledLetters(currentQuiz.scrambled);
+                
+                if (currentQuiz.answer === "사회적 거리두기") {
+                    createAnswerBoxes(8, [3]); 
+                } else {
+                    createAnswerBoxes(currentQuiz.answer.length);
+                }
+                
+                disableControls(false); 
+            }
+
+            function createAnswerBoxes(length, disabledIndexes = []) {
+                answerInputContainer.innerHTML = '';
+                answerBoxElements = [];
+                for (let i = 0; i < length; i++) {
+                    const answerBox = document.createElement('div');
+                    answerBox.classList.add('answer-box');
+                    answerBox.dataset.answerBoxIndex = i; 
+                    
+                    if (disabledIndexes.includes(i)) {
+                        answerBox.classList.add('disabled');
+                        answerBox.style.pointerEvents = 'none'; 
+                        answerBox.textContent = ''; 
+                    } else {
+                        answerBox.addEventListener('click', () => removeLetter(answerBox));
+                    }
+                    answerInputContainer.appendChild(answerBox);
+                    answerBoxElements.push(answerBox);
+                }
+            }
+
+            function displayScrambledLetters(letters) {
+                scrambledLettersContainer.innerHTML = '';
+                scrambledLetterElements = [];
+
+                const shuffledLetters = [...letters].sort(() => Math.random() - 0.5);
+
+                shuffledLetters.forEach((char, index) => {
+                    const letterBox = document.createElement('div');
+                    letterBox.classList.add('letter-box');
+                    letterBox.textContent = char;
+                    letterBox.dataset.currentScrambledIndex = index; 
+                    letterBox.addEventListener('click', () => selectLetter(letterBox));
+                    scrambledLettersContainer.appendChild(letterBox);
+                    scrambledLetterElements.push(letterBox);
+                });
+            }
+
+            function selectLetter(letterBox) {
+                if (letterBox.classList.contains('selected')) {
+                    return;
+                }
+                
+                const availableAnswerBox = answerBoxElements.find(box => !box.textContent && !box.classList.contains('disabled'));
+                if (availableAnswerBox) {
+                    availableAnswerBox.textContent = letterBox.textContent;
+                    availableAnswerBox.dataset.scrambledLetterCurrentIndex = letterBox.dataset.currentScrambledIndex; 
+                    letterBox.classList.add('selected');
+                    selectedLetters.push(letterBox); 
+                    availableAnswerBox.classList.add('filled');
+                }
+
+                const totalFillableBoxes = answerBoxElements.filter(box => !box.classList.contains('disabled')).length;
+                const filledFillableBoxes = selectedLetters.length;
+
+                if (filledFillableBoxes === totalFillableBoxes) {
+                    submitBtn.disabled = false;
+                    guidanceMessage.textContent = '문제를 풀면 정답확인을 클릭하세요.';
+                } else {
+                    guidanceMessage.textContent = ''; 
+                }
+            }
+
+            function removeLetter(answerBox) {
+                if (answerBox.classList.contains('disabled')) {
+                    return;
+                }
+
+                const char = answerBox.textContent;
+                if (!char) return;
+
+                const scrambledLetterCurrentIndex = answerBox.dataset.scrambledLetterCurrentIndex;
+                const correspondingScrambledLetter = scrambledLetterElements.find(box => 
+                    box.dataset.currentScrambledIndex === scrambledLetterCurrentIndex && box.classList.contains('selected')
+                );
+
+                if (correspondingScrambledLetter) {
+                    correspondingScrambledLetter.classList.remove('selected');
+                    selectedLetters = selectedLetters.filter(item => item !== correspondingScrambledLetter);
+                }
+                answerBox.textContent = '';
+                answerBox.classList.remove('filled');
+                delete answerBox.dataset.scrambledLetterCurrentIndex;
+
+                submitBtn.disabled = true; 
+                guidanceMessage.textContent = ''; 
+            }
+
+            function clearAnswer() {
+                answerBoxElements.forEach(box => {
+                    if (!box.classList.contains('disabled')) { 
+                        box.textContent = '';
+                        box.classList.remove('filled');
+                        delete box.dataset.scrambledLetterCurrentIndex;
+                    }
+                });
+                scrambledLetterElements.forEach(box => box.classList.remove('selected'));
+                selectedLetters = [];
+                resultDiv.textContent = '';
+                resultDiv.className = 'result';
+                feedbackMessage.textContent = '';
+                guidanceMessage.textContent = ''; 
+
+                submitBtn.disabled = true;
+                nextBtn.disabled = true;
+
+                disableControls(false);
+            }
+
+            function checkAnswer() {
+                const userAnswerArray = Array.from(answerInputContainer.children).map(box => {
+                    return box.classList.contains('disabled') ? ' ' : box.textContent; 
+                });
+                const userAnswer = userAnswerArray.join('').replace(/\s/g, ''); 
+                
+                const correctAnswer = quizData[currentQuestionIndex].answer.replace(/\s/g, '');
+
+                disableControls(true); 
+
+                if (userAnswer === correctAnswer) {
+                    resultDiv.textContent = '정답입니다!';
+                    resultDiv.classList.add('correct');
+                    document.getElementById('correctSound').play();
+                    correctCount++; 
+                    submitBtn.disabled = true;
+                    nextBtn.disabled = false; 
+                    guidanceMessage.textContent = '정답 확인 후 다음 문제를 클릭하세요.'; 
+                } else {
+                    resultDiv.textContent = `오답입니다. 정답은 '${quizData[currentQuestionIndex].answer}' 입니다.`;
+                    resultDiv.classList.add('wrong');
+                    document.getElementById('wrongSound').play();
+                    wrongCount++; 
+                    submitBtn.disabled = true; 
+                    nextBtn.disabled = false; 
+                    guidanceMessage.textContent = '오답입니다. 다음 문제를 클릭하세요.';
+                }
+                feedbackMessage.textContent = '';
+            }
+
+            function disableControls(disable) {
+                scrambledLetterElements.forEach(box => {
+                    box.style.pointerEvents = disable ? 'none' : 'auto';
+                    box.style.opacity = disable ? '0.6' : '1';
+                });
+                answerBoxElements.forEach(box => {
+                    if (!box.classList.contains('disabled')) {
+                        box.style.pointerEvents = disable ? 'none' : 'auto';
+                    }
+                    box.style.opacity = disable ? '0.6' : '1';
+                });
+            }
+
+            function loadNextQuestion() {
+                currentQuestionIndex++;
+                loadQuestion();
+            }
+
+            function endQuiz() {
+                questionText.textContent = '모든 퀴즈를 완료했습니다!';
+                scrambledLettersContainer.innerHTML = '';
+                answerInputContainer.innerHTML = '';
+                resultDiv.textContent = '퀴즈가 종료되었습니다. 결과를 확인하세요!';
+                resultDiv.className = 'result correct';
+                
+                submitBtn.style.display = 'none'; 
+                nextBtn.style.display = 'none';
+                clearInputBtn.style.display = 'none';
+
+                feedbackMessage.textContent = '';
+                guidanceMessage.textContent = '';
+                quizActive = false;
+
+                finalResultsDiv.style.display = 'block'; 
+                totalQuestionsCountSpan.textContent = quizData.length;
+                correctAnswersCountSpan.textContent = correctCount;
+                wrongAnswersCountSpan.textContent = wrongCount;
+
+                finalResultsDiv.querySelector('h3').textContent = '전체 문제';
+
+                allQuestionsList.innerHTML = '';
+                quizData.forEach((item, index) => {
+                    const listItem = document.createElement('li');
+                    listItem.innerHTML = `<strong>${index + 1}. ${item.question}</strong>`; 
+                    allQuestionsList.appendChild(listItem);
+                });
+                
+                if (restartQuizBtn) {
+                    restartQuizBtn.style.display = 'block';
+                }
+            }
+        });
+    </script>
+</body>
+</html>
