@@ -1,0 +1,436 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>디지털 성폭력 퀴즈</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.7.77/Tone.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Noto Sans KR', sans-serif;
+        }
+        .quiz-option {
+            transition: background-color 0.3s, transform 0.2s;
+        }
+        .quiz-option:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+        }
+        .correct {
+            background-color: #28a745 !important;
+            color: white;
+            border-color: #28a745;
+        }
+        .incorrect {
+            background-color: #dc3545 !important;
+            color: white;
+            border-color: #dc3545;
+        }
+        #bomb {
+            font-size: 5rem;
+            transition: transform 0.2s ease-in-out;
+        }
+        .explode {
+            animation: shake 0.5s, explode-effect 0.5s 0.5s forwards;
+        }
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            10%, 30%, 50%, 70%, 90% { transform: translateX(-10px); }
+            20%, 40%, 60%, 80% { transform: translateX(10px); }
+        }
+        @keyframes explode-effect {
+            from {
+                transform: scale(1);
+                opacity: 1;
+            }
+            to {
+                transform: scale(5);
+                opacity: 0;
+            }
+        }
+    </style>
+</head>
+<body class="bg-gray-200 flex items-center justify-center min-h-screen">
+
+    <div id="quiz-container" class="w-full max-w-[748px] mx-auto bg-white rounded-xl shadow-2xl p-6 md:p-10 text-center">
+        <!-- 시작 화면 -->
+        <div id="start-screen">
+            <h1 class="text-3xl md:text-4xl font-bold text-gray-800 mb-4">디지털 성폭력 예방 퀴즈</h1>
+            <p class="text-gray-600 mb-8">주어진 시간 안에 퀴즈를 풀어보세요. <br>시간이 초과되거나 틀리면 폭탄이 터집니다!</p>
+            <div class="text-6xl mb-8">💣</div>
+            <button id="start-btn" class="w-full bg-blue-500 hover:bg-blue-600 text-white font-bold py-3 px-4 rounded-lg text-xl transition-transform transform hover:scale-105">
+                퀴즈 시작하기
+            </button>
+        </div>
+
+        <!-- 퀴즈 화면 -->
+        <div id="quiz-screen" class="hidden">
+            <div class="flex justify-between items-center mb-6">
+                <div id="timer" class="text-2xl font-bold bg-gray-200 rounded-full w-16 h-16 flex items-center justify-center">10</div>
+                <div id="bomb">💣</div>
+                <div class="text-xl font-bold text-gray-700">
+                    <span id="current-question-num">1</span> / <span id="total-questions">10</span>
+                </div>
+            </div>
+            <div id="question-container" class="mb-6">
+                <h2 id="question-text" class="text-2xl font-semibold text-gray-800 mb-6 min-h-[100px]"></h2>
+                <div id="options-container" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <!-- 선택지 버튼들이 동적으로 추가될 영역 -->
+                </div>
+            </div>
+            <div id="feedback-container" class="mt-6">
+                <p id="feedback-text" class="text-2xl font-bold"></p>
+                <button id="next-btn" class="hidden mt-4 w-full bg-green-500 hover:bg-green-600 text-white font-bold py-3 px-4 rounded-lg text-lg transition-transform transform hover:scale-105">
+                    다음 문제
+                </button>
+            </div>
+        </div>
+
+        <!-- 결과 화면 -->
+        <div id="result-screen" class="hidden">
+            <h1 class="text-4xl font-bold text-gray-800 mb-4">퀴즈 결과</h1>
+            <div class="mb-8">
+                <p class="text-2xl text-blue-600 font-semibold">정답: <span id="correct-count">0</span>개</p>
+                <p class="text-2xl text-red-600 font-semibold">오답: <span id="incorrect-count">0</span>개</p>
+            </div>
+            <div id="result-details" class="text-left space-y-4">
+                <!-- 결과 상세 내용이 동적으로 추가될 영역 -->
+            </div>
+            <button id="restart-btn" class="mt-8 w-full bg-blue-500 hover:bg-blue-600 text-white font-bold py-3 px-4 rounded-lg text-xl transition-transform transform hover:scale-105">
+                다시 풀어보기
+            </button>
+        </div>
+    </div>
+
+    <script>
+        // --- 퀴즈 데이터 ---
+        const quizData = [
+            {
+                question: "친구가 싫다고 했는데 장난으로 사진을 찍어 보냈다면, 이 행동은?",
+                options: [
+                    { text: "재밌는 장난이다", correct: false },
+                    { text: "그냥 친구 사이에 할 수 있는 일이다", correct: false },
+                    { text: "상대방이 싫다고 했는데 하면 잘못된 행동이다", correct: true },
+                    { text: "나만 보기 때문에 괜찮다", correct: false }
+                ]
+            },
+            { 
+                question: "누군가의 얼굴 사진을 허락 없이 단체 채팅방에 올리는 행동은?",
+                options: [
+                    { text: "재미있는 공유", correct: false },
+                    { text: "디지털 성폭력이 될 수 있다", correct: true },
+                    { text: "인기 있는 친구 만들기", correct: false },
+                    { text: "다 같이 보려고 하는 거니까 괜찮다", correct: false }
+                ]
+            },
+            {         
+                question: "친구에게 성적인 그림이나 글을 보여주는 것은?",
+                options: [
+                    { text: "장난", correct: false },
+                    { text: "웃긴 이야기", correct: false },
+                    { text: "디지털 성폭력", correct: true },
+                    { text: "공부의 일부", correct: false }
+                ]
+            },
+            {
+                question: "친구의 모습을 몰래 촬영하는 건 어떤 행동인가요?",
+                options: [
+                    { text: "추억 남기기", correct: false },
+                    { text: "장난이니까 괜찮다", correct: false },
+                    { text: "불법 촬영은 범죄가 될 수 있는 행동이다", correct: true },
+                    { text: "SNS 올릴 용도니까 상관없다", correct: false }
+                ]
+            },
+            {
+                question: "다음 중 디지털 성폭력 피해를 입었을 때 가장 바람직한 행동은?",
+                options: [
+                    { text: "그냥 참는다", correct: false },
+                    { text: "가해자에게 직접 따진다", correct: false },
+                    { text: "혼자 해결하려 하지 말고 부모님, 선생님, 경찰 등에 즉시 도움을 요청해야 합니다", correct: true },
+                    { text: "인터넷에 피해 사실을 올린다", correct: false }
+                ]
+            },
+            {
+                question: "디지털 성폭력을 하지 않으려면 어떻게 해야 하나요?",
+                options: [
+                    { text: "재미있으면 다 해도 된다", correct: false },
+                    { text: "다른 사람의 입장을 먼저 생각한다", correct: true },
+                    { text: "선생님 몰래 해야 한다", correct: false },
+                    { text: "다들 하니까 따라한다", correct: false }
+                ]
+            },
+            {
+                question: "상대방이 불쾌해하거나 민망해하는 성적인 농담을 계속한다면?",
+                options: [
+                    { text: "그냥 웃자고 한 말이니까 괜찮다", correct: false },
+                    { text: "친한 사이니까 아무 말 해도 된다", correct: false },
+                    { text: "상대방이 불쾌하면 성희롱이나 디지털 성폭력이 될 수 있다", correct: true },
+                    { text: "모두가 웃었으니 문제 없다", correct: false }
+                ]
+            },
+            {
+                question: "누군가 불법 촬영물을 인터넷에 올렸다고 할 때, 그 영상을 다른 사람에게 전달하는 것은?",
+                options: [
+                    { text: "그냥 보여주기만 한 거니까 괜찮다", correct: false },
+                    { text: "이미 퍼진 영상이니까 상관없다", correct: false },
+                    { text: "불법 촬영물 유포에 해당할 수 있다", correct: true },
+                    { text: "친구들과 재미로 보는 건 문제 없다", correct: false }
+                ]
+            },
+            {
+                question: "인터넷에서 알게 된 사람이 나의 얼굴이나 몸을 찍은 사진을 보내달라고 하면?",
+                options: [
+                    { text: "그냥 해줘도 된다", correct: false },
+                    { text: "궁금할 수 있으니까 보내준다", correct: false },
+                    { text: "바로 거절하고, 위험한 행동이므로 어른에게 알린다", correct: true },
+                    { text: "친구한테 자랑한다", correct: false }
+                ]
+            },
+            {
+                question: "디지털 성폭력 피해을 입었을 때 신고나 도움을 받을 수 있는  곳은?",
+                options: [
+                    { text: "질병관리청 ", correct: false },
+                    { text: "디지털성범죄 피해자 지원센터, 경찰청사이버범죄신고센터", correct: true },
+                    { text: "한국도로공사", correct: false },
+                    { text: "소방서 119", correct: false }
+                ]
+            }
+        ];
+
+        // --- DOM 요소 ---
+        const startScreen = document.getElementById('start-screen');
+        const quizScreen = document.getElementById('quiz-screen');
+        const resultScreen = document.getElementById('result-screen');
+        
+        const startBtn = document.getElementById('start-btn');
+        const restartBtn = document.getElementById('restart-btn');
+        const nextBtn = document.getElementById('next-btn');
+
+        const questionText = document.getElementById('question-text');
+        const optionsContainer = document.getElementById('options-container');
+        const timerEl = document.getElementById('timer');
+        const bombEl = document.getElementById('bomb');
+        const feedbackText = document.getElementById('feedback-text');
+        
+        const currentQuestionNumEl = document.getElementById('current-question-num');
+        const totalQuestionsEl = document.getElementById('total-questions');
+        const correctCountEl = document.getElementById('correct-count');
+        const incorrectCountEl = document.getElementById('incorrect-count');
+        const resultDetailsEl = document.getElementById('result-details');
+
+        // --- 퀴즈 상태 변수 ---
+        let currentQuestionIndex = 0;
+        let score = 0;
+        let timer;
+        let timeLeft = 10;
+        let userAnswers = [];
+        let explosionSound;
+
+        // --- 이벤트 리스너 ---
+        startBtn.addEventListener('click', startQuiz);
+        nextBtn.addEventListener('click', nextQuestion);
+        restartBtn.addEventListener('click', () => {
+             // Reset and start again
+            currentQuestionIndex = 0;
+            score = 0;
+            userAnswers = [];
+            resultScreen.classList.add('hidden');
+            startQuiz();
+        });
+
+        // --- 소리 생성 ---
+        function setupSound() {
+            // Tone.js가 로드되었는지 확인
+            if (typeof Tone !== 'undefined' && Tone.context.state !== 'running') {
+                Tone.start();
+            }
+            // 기존 NoiseSynth를 더 크고 실감 나는 소리로 변경
+            explosionSound = new Tone.NoiseSynth({
+                noise: { type: 'pink' }, // Pink 노이즈로 더 풍부한 소리
+                envelope: {
+                    attack: 0.01,   // 빠른 공격으로 타격감 증가
+                    decay: 0.8,    // 더 긴 감쇠로 여운과 럼블 증가
+                    sustain: 0,
+                    release: 0.2 // 짧은 릴리즈
+                }
+            }).chain(
+                new Tone.Filter(150, 'lowpass'), // 저역 통과 필터로 깊은 베이스 강조
+                new Tone.Volume(-5) // 볼륨을 높여 더 크게 들리도록 조정 (-5dB)
+            ).toDestination();
+        }
+
+        function playExplosion() {
+            if (explosionSound) {
+                 explosionSound.triggerAttackRelease("0.5"); // 소리 재생 시간도 조금 더 길게
+            }
+            bombEl.classList.add('explode');
+            setTimeout(() => {
+                bombEl.classList.remove('explode');
+                bombEl.style.transform = 'scale(1)';
+                bombEl.style.opacity = '1';
+            }, 1000);
+        }
+
+        // --- 퀴즈 로직 ---
+        function startQuiz() {
+            setupSound();
+            startScreen.classList.add('hidden');
+            quizScreen.classList.remove('hidden');
+            totalQuestionsEl.textContent = quizData.length;
+            loadQuestion();
+        }
+
+        function loadQuestion() {
+            resetState();
+            const currentQuestion = quizData[currentQuestionIndex];
+            questionText.textContent = currentQuestion.question;
+            currentQuestionNumEl.textContent = currentQuestionIndex + 1;
+            
+            // 선택지 섞기
+            const shuffledOptions = [...currentQuestion.options].sort(() => Math.random() - 0.5);
+
+            shuffledOptions.forEach(option => {
+                const button = document.createElement('button');
+                button.textContent = option.text;
+                button.classList.add('quiz-option', 'w-full', 'p-4', 'border-2', 'rounded-lg', 'text-lg', 'bg-gray-50', 'hover:bg-gray-200');
+                button.addEventListener('click', () => selectAnswer(option, button));
+                optionsContainer.appendChild(button);
+            });
+
+            startTimer();
+        }
+
+        function resetState() {
+            clearTimeout(timer);
+            optionsContainer.innerHTML = '';
+            feedbackText.textContent = '';
+            nextBtn.classList.add('hidden');
+            timeLeft = 10;
+            timerEl.textContent = timeLeft;
+            timerEl.classList.remove('text-red-500');
+        }
+
+        function startTimer() {
+            timer = setInterval(() => {
+                timeLeft--;
+                timerEl.textContent = timeLeft;
+                if (timeLeft <= 3) {
+                    timerEl.classList.add('text-red-500');
+                }
+                if (timeLeft <= 0) {
+                    clearInterval(timer);
+                    handleTimeout();
+                }
+            }, 1000);
+        }
+
+        function handleTimeout() {
+            userAnswers.push({ questionIndex: currentQuestionIndex, answer: '시간 초과', correct: false });
+            feedbackText.textContent = '시간 초과! 💣';
+            feedbackText.classList.add('text-red-500');
+            playExplosion();
+            showCorrectAnswer();
+            disableOptions();
+        }
+
+        function selectAnswer(selectedOption, button) {
+            clearInterval(timer);
+            disableOptions();
+
+            const isCorrect = selectedOption.correct;
+            userAnswers.push({ questionIndex: currentQuestionIndex, answer: selectedOption.text, correct: isCorrect });
+            
+            if (isCorrect) {
+                score++;
+                button.classList.add('correct');
+                feedbackText.textContent = '정답입니다! 🎉';
+                feedbackText.classList.add('text-green-500');
+                feedbackText.classList.remove('text-red-500');
+            } else {
+                button.classList.add('incorrect');
+                feedbackText.textContent = '오답입니다! 💥';
+                feedbackText.classList.add('text-red-500');
+                feedbackText.classList.remove('text-green-500');
+                playExplosion();
+                showCorrectAnswer();
+            }
+            
+            if (currentQuestionIndex < quizData.length - 1) {
+                nextBtn.textContent = '다음 문제';
+            } else {
+                nextBtn.textContent = '결과 보기';
+            }
+            nextBtn.classList.remove('hidden');
+        }
+        
+        function disableOptions() {
+            Array.from(optionsContainer.children).forEach(btn => {
+                btn.disabled = true;
+                btn.classList.add('opacity-70', 'cursor-not-allowed');
+            });
+        }
+
+        function showCorrectAnswer() {
+             const correctOptionData = quizData[currentQuestionIndex].options.find(opt => opt.correct);
+             Array.from(optionsContainer.children).forEach(btn => {
+                if (btn.textContent === correctOptionData.text) {
+                    btn.classList.add('correct');
+                }
+             });
+             if (currentQuestionIndex < quizData.length - 1) {
+                nextBtn.textContent = '다음 문제';
+            } else {
+                nextBtn.textContent = '결과 보기';
+            }
+            nextBtn.classList.remove('hidden');
+        }
+
+        function nextQuestion() {
+            currentQuestionIndex++;
+            if (currentQuestionIndex < quizData.length) {
+                loadQuestion();
+            } else {
+                showResults();
+            }
+        }
+
+        function showResults() {
+            quizScreen.classList.add('hidden');
+            resultScreen.classList.remove('hidden');
+            correctCountEl.textContent = score;
+            incorrectCountEl.textContent = quizData.length - score;
+
+            resultDetailsEl.innerHTML = ''; // Clear previous results
+            quizData.forEach((question, index) => {
+                const userAnswer = userAnswers[index];
+                const correctOption = question.options.find(opt => opt.correct).text;
+                
+                const resultItem = document.createElement('div');
+                resultItem.classList.add('p-4', 'rounded-lg');
+                
+                let answerStatus;
+                if (userAnswer.correct) {
+                    resultItem.classList.add('bg-green-100');
+                    answerStatus = `<span class="font-bold text-green-700">정답</span>`;
+                } else {
+                     resultItem.classList.add('bg-red-100');
+                    answerStatus = `<span class="font-bold text-red-700">오답</span>`;
+                }
+                
+                resultItem.innerHTML = `
+                    <p class="font-bold text-gray-800">${index + 1}. ${question.question}</p>
+                    <p class="text-sm text-gray-600">선택한 답: ${userAnswer.answer}</p>
+                    <p class="text-sm text-gray-600">정답: ${correctOption}</p>
+                    <div class="mt-1">${answerStatus}</div>
+                `;
+                resultDetailsEl.appendChild(resultItem);
+            });
+        }
+
+        window.onload = setupSound; // Ensure sound is ready on first interaction
+    </script>
+
+</body>
+</html>

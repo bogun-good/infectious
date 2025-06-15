@@ -1,0 +1,409 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>펭수의 응급처치 퀴즈</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Inter 폰트를 Google Fonts에서 가져옵니다. */
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
+        
+        body {
+            font-family: 'Inter', 'Malgun Gothic', sans-serif;
+            line-height: 1.6;
+        }
+        /* 펭수와 계단의 부드러운 움직임을 위한 transition */
+        #pengsoo {
+            transition: all 0.7s ease-in-out;
+            z-index: 20; /* 펭수가 계단 위로 보이도록 설정 */
+            transform: translateX(-50%); /* 펭수의 왼쪽 정렬을 위해 자신의 너비 절반만큼 왼쪽으로 이동 */
+        }
+        /* 계단 스타일 */
+        .step {
+            background-color: #6b7280; /* 회색 계단 */
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+            position: absolute;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            color: #ffffff; /* 계단 숫자 색상 */
+            font-weight: bold;
+            font-size: 0.8rem; /* 계단 숫자 크기 */
+        }
+
+        /* 퀴즈 피드백 스타일 */
+        .feedback-message {
+            margin-top: 1rem;
+            padding: 0.75rem;
+            border-radius: 0.5rem;
+            font-weight: bold;
+            text-align: center;
+        }
+        .correct {
+            background-color: #d4edda; /* 정답 - 연두색 */
+            color: #155724; /* 정답 - 진한 녹색 글씨 */
+        }
+        .incorrect {
+            background-color: #f8d7da; /* 오답 - 연한 빨강색 */
+            color: #721c24; /* 오답 - 진한 빨강 글씨 */
+        }
+        /* 옵션 라디오 버튼 숨기고 span으로 커스텀 스타일 적용 */
+        .options label {
+            transition: background-color 0.2s;
+            margin-bottom: 0.5rem; /* 옵션 간격 줄이기 */
+        }
+        .options input[type="radio"] {
+            display: none; /* 작은 원(라디오 버튼) 숨기기 */
+        }
+        .options label span {
+            display: block;
+            padding: 0.75rem;
+            border-radius: 0.5rem;
+            border: 1px solid #d1d5db; /* 옵션 테두리 - 회색 */
+            cursor: pointer;
+            text-indent: 1rem; /* 텍스트 들여쓰기 */
+            position: relative;
+        }
+        /* 선택된 옵션 스타일 */
+        .options input[type="radio"]:checked + span {
+            background-color: #bfdbfe; /* 선택된 옵션 - 연한 파랑색 */
+            border-color: #3b82f6; /* 선택된 옵션 - 진한 파랑색 테두리 */
+            box-shadow: 0 0 0 2px #3b82f6; /* 선택 시 테두리 그림자 */
+        }
+        .options label:hover span {
+            background-color: #e5e7eb; /* 옵션 호버 - 연한 회색 */
+        }
+
+        /* 모달 스타일 */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.6);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+        .modal-content {
+            background-color: #ffffff;
+            padding: 2rem;
+            border-radius: 0.75rem;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+            text-align: center;
+            max-width: 90%;
+            min-width: 300px;
+            position: relative;
+        }
+        .close-button {
+            position: absolute;
+            top: 0.75rem;
+            right: 0.75rem;
+            font-size: 1.5rem;
+            cursor: pointer;
+            color: #6b7280;
+        }
+
+        /* 반응형 디자인을 위한 작은 화면 조정 */
+        @media (max-width: 640px) {
+            .step {
+                font-size: 0.7rem; /* 작은 화면에서 계단 숫자 크기 조정 */
+            }
+        }
+    </style>
+</head>
+<body class="bg-gray-100 text-gray-800 p-4 sm:p-6 lg:p-8 flex justify-center items-center min-h-screen">
+    <div class="container bg-white p-6 sm:p-8 lg:p-10 rounded-xl shadow-lg max-w-4xl w-full flex flex-col items-center">
+        <h1 class="text-3xl sm:text-4xl font-bold text-center text-blue-800 mb-6">
+            🐧 펭수의 계단 오르기: 응급처치 퀴즈 🐧
+        </h1>
+        <hr class="border-t-2 border-blue-300 my-8 w-full">
+
+        <div id="game-area" class="relative w-full h-64 sm:h-80 lg:h-96 flex justify-center items-end overflow-hidden mb-10">
+            <div id="steps-area" class="absolute bottom-0 left-0 w-full h-full">
+            </div>
+            
+            <div id="pengsoo" class="absolute text-5xl">🐧</div>
+        </div>
+
+        <div id="quiz-area" class="w-full">
+            <h2 id="quiz-stage" class="text-xl sm:text-2xl font-semibold text-center text-blue-700 mb-6">
+                계단 - 1단계
+            </h2>
+            <div id="question-block" class="bg-blue-50 p-5 rounded-lg border-l-4 border-blue-500 mb-6 shadow-sm">
+                <p id="question-number" class="font-semibold text-lg mb-3">문제 X.</p>
+                <p id="question-text" class="mb-4">질문 내용</p>
+                <div id="options-area" class="options space-y-2">
+                    </div>
+                <div id="feedback" class="feedback-message hidden"></div>
+            </div>
+
+            <div class="flex justify-center mt-6 space-x-4">
+                <button id="check-answer-btn" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-6 rounded-lg shadow-md transition-transform transform hover:scale-105 active:scale-95">
+                    정답 확인
+                </button>
+                <button id="next-question-btn" class="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-6 rounded-lg shadow-md transition-transform transform hover:scale-105 active:scale-95 hidden">
+                    다음
+                </button>
+            </div>
+        </div>
+
+        <div id="completion-modal" class="modal-overlay hidden">
+            <div class="modal-content">
+                <span id="modal-close-btn" class="close-button">&times;</span>
+                <p class="text-2xl sm:text-3xl font-bold text-blue-800 mb-4">축하합니다! 🎉</p>
+                <p class="text-lg text-gray-700 mb-6">
+                    펭수가 모든 계단을 올랐습니다! 만세! 🐧🙌
+                </p>
+                <button id="restart-game-btn" class="bg-yellow-500 hover:bg-yellow-600 text-white font-bold py-2 px-6 rounded-lg shadow-md transition-transform transform hover:scale-105 active:scale-95">
+                    다시 시작
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 퀴즈 데이터 정의 (9번, 12번 문제 제거 및 10단계로 조정)
+        const quizData = [
+            { id: 'q1', section: '1. 응급 처치의 개념', question: "다음 중 '응급 처치'의 정의로 가장 적절한 것은?", options: ["A. 병원에서 의사가 시행하는 모든 치료", "B. 위급한 상황에서 전문가가 없이 즉시 행하는 임시적인 처치", "C. 환자가 완전히 회복할 때까지 시행하는 장기 치료", "D. 약을 사용한 모든 치료 행위"], answer: "B" },
+            { id: 'q2', section: '2. 응급 처치의 중요성', question: "응급 처치가 중요한 이유 두 가지로 가장 적절한 것은?", options: ["A. 병원비 절약, 의사 역할 대체", "B. 생명 구출, 부상 악화 방지", "C. 통증 즉시 제거, 완벽한 회복 보장", "D. 심리적 안정, 범죄 예방"], answer: "B" },
+            { id: 'q3', section: '2. 응급 처치의 중요성', question: "응급 처치를 제대로 하지 않았을 경우 나타날 수 있는 결과로 옳지 않은 것은?", options: ["A. 상태가 악화될 수 있다", "B. 생명을 잃을 수 있다", "C. 빠른 회복을 도울 수 있다", "D. 후유증이 심해질 수 있다"], answer: "C" },
+            { id: 'q4', section: '3. 상처가 났을 때의 응급 처치 방법', question: "작은 상처가 났을 때 가장 먼저 해야 할 응급 처치는?", options: ["A. 얼음찜질", "B. 알코올 소독", "C. 흐르는 물로 세척", "D. 붕대 감기"], answer: "C" },
+            { id: 'q5', section: '4. 코피가 날 때의 응급 처치 방법', question: "코피가 날 때 가장 적절한 응급 처치 방법은?", options: ["A. 고개를 뒤로 젖히고 눕는다", "B. 고개를 앞으로 숙이고 코를 5~10분간 압박한다", "C. 코를 계속 풀어준다", "D. 물을 마신다"], answer: "B" },
+            { id: 'q6', section: '5. 치아가 다쳤을 때의 응급 처치 방법', question: "앞니가 완전히 빠졌을 경우 응급 처치로 할 수 있는 가장 적절한 방법은?", options: ["A. 빠진 이를 흙에 묻는다", "B. 빠진 이를 휴지에 싸서 보관한다", "C. 빠진 이를 우유에 담가 병원에 가져간다", "D. 빠진 이를 흐르는 물에 씻어 버린다"], answer: "C" },
+            { id: 'q7', section: '6. 화상을 입었을 때의 응급 처치 방법', question: "화상을 입었을 때 가장 먼저 해야 할 행동은?", options: ["A. 얼음을 문지른다", "B. 화상 부위를 따뜻한 물에 담근다", "C. 흐르는 찬물에 10~20분간 식힌다", "D. 연고를 먼저 바른다"], answer: "C" },
+            { id: 'q8', section: '6. 화상을 입었을 때의 응급 처치 방법', question: "심한 화상(물집이 생기거나 조직이 손상된 경우)의 경우, 직접 손을 대거나 터뜨리면 안 되는 가장 주된 이유는?", options: ["A. 통증이 심해지기 때문이다", "B. 감염 위험이 크기 때문이다", "C. 상처가 빨리 아물기 때문이다", "D. 흉터가 크게 남지 않기 때문이다"], answer: "B" },
+            { id: 'q10', section: '8. 벌에 쏘였을 때의 응급 처치 방법', question: "벌에 쏘였을 때 응급 처치 방법으로 옳은 것은?", options: ["A. 침이 박혀 있으면 손으로 눌러서 뺀다", "B. 침을 카드로 제거한 후, 냉찜질한다", "C. 벌 쏜 부위를 문지른다", "D. 뜨거운 물로 씻는다"], answer: "B" },
+            { id: 'q11', section: '8. 벌에 쏘인 후 숨쉬기 곤란하거나 얼굴이 붓는 증상이 나타날 때, 어떻게 해야 하나요?', question: "벌에 쏘여 숨쉬기 곤란하거나 얼굴이 붓는 증상이 나타나면 어떻게 해야 하나요?", options: ["A. 찬물로 쏘인 부위를 계속 문지른다", "B. 소금을 바른다", "C. 즉시 병원에 가거나 119에 신고한다", "D. 자가 치료를 시도한다"], answer: "C" }
+        ];
+
+        // 게임 상태 변수
+        let currentQuestionIndex = 0; // 현재 풀어야 할 문제의 인덱스 (0부터 시작)
+        let stepsElements = []; // 각 계단 DOM 요소를 저장
+        const NUM_STEPS = 10; // 총 계단 수 (퀴즈 문제 수와 동일)
+
+        // DOM 요소 참조
+        const pengsoo = document.getElementById('pengsoo');
+        const quizStage = document.getElementById('quiz-stage');
+        const questionNumberEl = document.getElementById('question-number');
+        const questionTextEl = document.getElementById('question-text');
+        const optionsArea = document.getElementById('options-area');
+        const feedbackEl = document.getElementById('feedback');
+        const checkAnswerBtn = document.getElementById('check-answer-btn');
+        const nextQuestionBtn = document.getElementById('next-question-btn');
+        const completionModal = document.getElementById('completion-modal');
+        const modalCloseBtn = document.getElementById('modal-close-btn');
+        const restartGameBtn = document.getElementById('restart-game-btn');
+        const gameArea = document.getElementById('game-area');
+
+        /**
+         * 게임을 초기화하고 첫 번째 질문을 표시합니다.
+         */
+        function initGame() {
+            currentQuestionIndex = 0;
+            completionModal.classList.add('hidden'); // 모달 숨김
+            pengsoo.textContent = '🐧'; // 펭수 아이콘 초기화
+
+            // 계단 생성
+            createStairs(NUM_STEPS);
+            
+            // 펭수 초기 위치 설정 (계단 아래 왼쪽 바닥)
+            // requestAnimationFrame을 사용하여 펭수의 정확한 offsetWidth를 얻을 수 있도록 합니다.
+            requestAnimationFrame(() => {
+                updatePengsooPosition(0); // 0은 시작 지점(땅)을 의미
+            });
+
+            displayQuestion(); // 첫 번째 문제 표시
+        }
+
+        /**
+         * 계단 요소를 동적으로 생성하고 배치합니다.
+         * 계단이 왼쪽 아래에서 시작하여 오른쪽 위로 올라가는 형태로 변경되었습니다.
+         * @param {number} numSteps - 생성할 계단의 총 개수
+         */
+        function createStairs(numSteps) {
+            const stepsArea = document.getElementById('steps-area');
+            stepsArea.innerHTML = ''; // 이전 계단 초기화
+            stepsElements = []; // 배열 초기화
+
+            const gameAreaRect = gameArea.getBoundingClientRect();
+            const gameAreaWidth = gameAreaRect.width;
+            const gameAreaHeight = gameAreaRect.height;
+
+            // 계단 너비를 '단계' 텍스트에 맞게 고정된 픽셀 값으로 설정
+            const fixedStepWidth = 80; // px, 예: "10단계" 텍스트가 충분히 들어갈 너비
+            // 계단 높이를 줄여서 10단계 모두 보이도록 조정
+            const fixedStepHeight = 30; // px, 45px에서 30px로 조정
+            const horizontalSpacing = 80; // 각 계단이 옆으로 이동하는 거리
+            // 계단 수직 간격을 계단 높이와 동일하게 조정
+            const verticalSpacing = fixedStepHeight; // 각 계단이 위로 이동하는 거리 (계단 높이와 동일)
+
+            const startLeftOffset = gameAreaWidth * 0.05; // 첫 계단의 왼쪽 시작 위치 (게임 영역의 5% 지점)
+            const startBottomOffset = 0; // 바닥 기준 높이
+
+            for (let i = 0; i < numSteps; i++) {
+                const stepDiv = document.createElement('div');
+                stepDiv.id = `step-${i + 1}`;
+                stepDiv.className = `step`;
+                
+                // 각 계단의 위치를 계산 (오른쪽으로 이동하며 위로 올라감)
+                const currentLeft = startLeftOffset + (i * horizontalSpacing); 
+                const currentBottom = startBottomOffset + (i * verticalSpacing); 
+
+                stepDiv.style.width = `${fixedStepWidth}px`;
+                stepDiv.style.height = `${fixedStepHeight}px`;
+                stepDiv.style.left = `${currentLeft}px`;
+                stepDiv.style.bottom = `${currentBottom}px`;
+                stepDiv.style.zIndex = i + 1; // 아래 계단이 위에 오도록 (z-index 낮게)
+                stepDiv.innerHTML = `<span>${i + 1}단계</span>`; // 계단 단계 표시
+                stepsArea.appendChild(stepDiv);
+                stepsElements.push(stepDiv);
+            }
+        }
+
+        /**
+         * 현재 질문을 화면에 표시합니다.
+         */
+        function displayQuestion() {
+            if (currentQuestionIndex >= quizData.length) {
+                // 모든 질문 완료
+                showCompletion();
+                return;
+            }
+
+            const currentQuestion = quizData[currentQuestionIndex];
+            
+            // 문제 번호와 문제 내용을 한 줄로 표시
+            questionNumberEl.textContent = `문제 ${currentQuestionIndex + 1}. ${currentQuestion.question}`;
+            questionTextEl.textContent = ''; // 이전에 문제 텍스트를 따로 표시하던 요소를 비웁니다.
+
+            quizStage.textContent = `계단 - ${currentQuestionIndex + 1}단계`;
+            
+            optionsArea.innerHTML = ''; // 이전 옵션 초기화
+            feedbackEl.classList.add('hidden'); // 피드백 메시지 숨김
+            feedbackEl.classList.remove('correct', 'incorrect'); // 피드백 스타일 초기화
+            nextQuestionBtn.classList.add('hidden'); // '다음' 버튼 숨김
+            checkAnswerBtn.classList.remove('hidden'); // '정답 확인' 버튼 표시
+
+            // 객관식 질문 옵션 렌더링
+            currentQuestion.options.forEach((option, index) => {
+                const label = document.createElement('label');
+                label.className = 'block cursor-pointer p-2 rounded-md hover:bg-blue-100 transition-colors duration-200';
+                label.innerHTML = `
+                    <input type="radio" name="current_question" value="${String.fromCharCode(65 + index)}">
+                    <span>${option}</span>
+                `;
+                optionsArea.appendChild(label);
+            });
+            checkAnswerBtn.textContent = '정답 확인';
+            checkAnswerBtn.onclick = checkAnswer;
+        }
+
+        /**
+         * 객관식 질문의 정답을 확인하고 피드백을 제공합니다.
+         */
+        function checkAnswer() {
+            const currentQuestion = quizData[currentQuestionIndex];
+            const selectedOption = document.querySelector('input[name="current_question"]:checked');
+            
+            feedbackEl.classList.remove('hidden');
+            if (selectedOption && selectedOption.value === currentQuestion.answer) {
+                feedbackEl.textContent = '정답입니다! 🎉';
+                feedbackEl.classList.add('correct');
+                feedbackEl.classList.remove('incorrect');
+                checkAnswerBtn.classList.add('hidden'); // 정답 맞췄으니 확인 버튼 숨김
+                nextQuestionBtn.classList.remove('hidden'); // 다음 버튼 표시
+            } else {
+                feedbackEl.textContent = '틀렸습니다. 다시 시도해주세요. 😔';
+                feedbackEl.classList.add('incorrect');
+                feedbackEl.classList.remove('correct');
+                // 틀렸을 경우 다시 선택할 수 있도록 버튼 유지
+            }
+        }
+
+        /**
+         * 펭수 위치를 업데이트하고 다음 질문으로 진행합니다.
+         * 모든 질문이 완료되면 게임 완료 화면을 표시합니다.
+         */
+        function advanceGame() {
+            // 펭수를 다음 계단으로 이동 (currentQuestionIndex는 현재 풀었던 문제의 인덱스이므로, 다음 단계는 currentQuestionIndex + 1)
+            updatePengsooPosition(currentQuestionIndex + 1); // 1단계로 이동하려면 인덱스 0이므로 +1 해줌
+
+            feedbackEl.classList.add('hidden'); // 피드백 메시지 숨김
+            checkAnswerBtn.classList.add('hidden'); // 확인 버튼 숨김
+            nextQuestionBtn.classList.add('hidden'); // 다음 버튼 숨김 (이미 클릭했으므로)
+
+            // 펭수 이동 애니메이션 완료 후 다음 질문 로드
+            setTimeout(() => {
+                currentQuestionIndex++; // 다음 문제로 인덱스 증가
+                displayQuestion();
+            }, 700); // 펭수 transition 시간과 맞춤
+        }
+
+        /**
+         * 펭수의 시각적인 위치를 주어진 단계에 맞춰 업데이트합니다.
+         * @param {number} targetStepNumber - 펭수가 이동할 목표 계단 번호 (0: 시작 지점, 1~NUM_STEPS: 계단)
+         */
+        function updatePengsooPosition(targetStepNumber) {
+            let pengsooTargetBottom;
+            let pengsooTargetLeft;
+            
+            if (targetStepNumber === 0) { // 펭수가 시작 지점 (첫 번째 계단 왼쪽 바닥)
+                const gameAreaRect = gameArea.getBoundingClientRect();
+                pengsooTargetLeft = gameAreaRect.width * 0.05; // 게임 영역의 왼쪽에서 5% 지점
+                pengsooTargetBottom = 0; // 게임 영역 바닥에 위치
+                pengsoo.textContent = '🐧'; // 만세 포즈 초기화
+            } else if (targetStepNumber <= NUM_STEPS) { // 펭수가 계단 위에 있음
+                const targetElement = stepsElements[targetStepNumber - 1]; // 배열 인덱스는 0부터 시작
+                // 펭수의 왼쪽 위치를 계단의 중앙으로 설정 (CSS transform으로 펭수 자체를 중앙 정렬)
+                pengsooTargetLeft = parseInt(targetElement.style.left) + (parseInt(targetElement.style.width) / 2);
+                pengsooTargetBottom = parseInt(targetElement.style.bottom) + parseInt(targetElement.style.height); // 계단 위에 위치
+                pengsoo.textContent = '🐧'; // 만세 포즈 초기화
+            }
+            
+            // 펭수의 위치를 업데이트
+            pengsoo.style.left = `${pengsooTargetLeft}px`;
+            pengsoo.style.bottom = `${pengsooTargetBottom}px`;
+        }
+
+        /**
+         * 게임 완료 모달을 표시합니다. 펭수가 만세 포즈를 취합니다.
+         */
+        function showCompletion() {
+            // 마지막 계단에 펭수를 위치시키고 만세 아이콘으로 변경
+            const lastStep = stepsElements[NUM_STEPS - 1];
+            
+            // 펭수의 왼쪽 위치를 마지막 계단의 중앙으로 설정
+            const pengsooTargetLeft = parseInt(lastStep.style.left) + (parseInt(lastStep.style.width) / 2);
+            const pengsooTargetBottom = parseInt(lastStep.style.bottom) + parseInt(lastStep.style.height);
+            
+            pengsoo.style.left = `${pengsooTargetLeft}px`;
+            pengsoo.style.bottom = `${pengsooTargetBottom}px`;
+            pengsoo.textContent = '🙌'; // 펭수가 만세하는 이모지로 변경
+
+            completionModal.classList.remove('hidden');
+        }
+
+        // 이벤트 리스너 설정
+        window.onload = initGame; // 페이지 로드 시 게임 초기화
+
+        nextQuestionBtn.addEventListener('click', advanceGame); // '다음' 버튼 클릭 시 진행
+        restartGameBtn.addEventListener('click', initGame); // '다시 시작' 버튼 클릭 시 초기화
+        modalCloseBtn.addEventListener('click', () => { // 모달 닫기 버튼
+            completionModal.classList.add('hidden');
+        });
+
+        // 윈도우 리사이즈 시 계단 및 펭수 위치 재조정 (반응형 대응)
+        window.onresize = () => {
+            createStairs(NUM_STEPS); // 계단 재배치
+            // 현재 펭수의 논리적 위치에 따라 재조정
+            // `currentQuestionIndex`가 0일 때는 초기 위치, 아니면 해당 계단에 위치
+            updatePengsooPosition(currentQuestionIndex === 0 ? 0 : currentQuestionIndex); 
+        };
+    </script>
+</body>
+</html>
